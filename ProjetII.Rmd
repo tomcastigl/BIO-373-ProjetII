@@ -1,0 +1,105 @@
+---
+title: "ProjetII"
+author: "Sven Spörri, Thomas Castiglione"
+date: "07/12/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R environment
+
+We use the package ggplot2
+
+```{r}
+library(ggplot2)
+```
+
+# 2. Data exploration
+
+We load the data genotypes.txt, variants_info_openSNP.txt, phenotypes.txt and covariates.txt, and change the data format to be more suitable for our work.
+
+```{r}
+genotypes<-read.table('resources/genotypes.txt',header=T)
+phenotypes<-read.table('resources/phenotypes.txt', header=T)
+variants.info<-read.table('resources/variants_info_openSNP.txt',header=T)
+covariates<-read.table('resources/covariates.txt',header=T)
+
+```
+
+1. linear regression.
+```{r}
+covariates.pheno<-cbind(covariates,phenotypes$HEIGHT)
+rownames(covariates.pheno)<-covariates$CHALLENGE_ID
+covariates.pheno<-covariates.pheno[,-1]
+colnames(covariates.pheno)<-c('SEX','PLATFORM','HEIGHT')
+
+lin.reg.cov<-lm(HEIGHT~., data=covariates.pheno)
+summary(lin.reg.cov)
+
+```
+The multiple R-squared value of 0.472 shows us that the covariates does impact the phenotype, but it is does not fully determines it.
+
+2. Plotting the phenotype distribution
+```{r}
+ggplot(phenotypes)+geom_density(aes(HEIGHT),size=1)+theme_bw()
+```
+```{r}
+covariates.pheno.M<-covariates.pheno[apply(covariates.pheno,1,function(x) x[1]=='M'),]
+covariates.pheno.F<-covariates.pheno[apply(covariates.pheno,1,function(x) x[1]=='F'),]
+
+ggplot()+geom_density(data=covariates.pheno,aes(HEIGHT,color='male+female'),size=1.1)+
+  geom_density(data=covariates.pheno.M,aes(HEIGHT,color='male'),size=0.8)+
+  geom_density(data=covariates.pheno.F,aes(HEIGHT,color='female'),size=0.8)+ theme_bw()
+
+```
+
+```{r}
+gwas<-function(SNP,phenos=phenotypes$HEIGHT){
+  df<-data.frame(cbind(SNP,phenos))
+  colnames(df)<-c('SNP','HEIGHT')
+  fit<-lm(HEIGHT~.,data=df)
+  summary.coefs<-summary(fit)$coefficient
+  data.frame(coef=summary.coefs[2,1],pval=summary.coefs[2,4])
+}
+gwas.with.cov<-function(SNP,cov=covariates.pheno){
+  df<-data.frame(cbind(SNP,cov))
+  colnames(df)<-c('SNP',colnames(covariates.pheno))
+  fit<-lm(HEIGHT~.,data=df)
+  summary.coefs<-summary(fit)$coefficients
+  print(head(summary.coefs))
+  data.frame(coef=summary.coefs[2,1],pval=summary.coefs[2,4])
+}
+```
+
+```{r}
+gwas.res<-data.frame(coef=NULL,pval=NULL)
+for(i in 1:ncol(genotypes)){
+  gwas.res<-rbind(gwas.res,gwas(genotypes[,i]))
+}
+rownames(gwas.res)<-colnames(genotypes)
+```
+
+```{r}
+gwas.res.with.cov<-data.frame(coef=NULL,pval=NULL)
+for(i in 1:ncol(genotypes)){
+  gwas.res.with.cov<-rbind(gwas.res.with.cov,gwas.with.cov(genotypes[,i]))
+}
+rownames(gwas.res.with.cov)<-colnames(genotypes)
+```
+Now manhattanplot.
+```{r}
+# gwas.res<-gwas.res[variants.info$SNP,]
+# cols<-variants.info$CHR
+# ggplot(gwas.res,aes(x=rownames(gwas.res),y=-log10(pval),color=as.factor(cols),size=-log10(pval)))+
+  # geom_point(alpha=0.5)+
+  # scale_size_continuous(range = c(0.5,3)) 
+```
+
+
+
+
