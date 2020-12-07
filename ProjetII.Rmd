@@ -24,10 +24,10 @@ library(ggplot2)
 We load the data genotypes.txt, variants_info_openSNP.txt, phenotypes.txt and covariates.txt, and change the data format to be more suitable for our work.
 
 ```{r}
-genotypes<-read.table('resources/genotypes.txt',header=T)
-phenotypes<-read.table('resources/phenotypes.txt', header=T)
-variants.info<-read.table('resources/variants_info_openSNP.txt',header=T)
-covariates<-read.table('resources/covariates.txt',header=T)
+genotypes<-read.table('ressources/genotypes.txt',header=T)
+phenotypes<-read.table('ressources/phenotypes.txt', header=T)
+variants.info<-read.table('ressources/variants_info_openSNP.txt',header=T)
+covariates<-read.table('resosurces/covariates.txt',header=T)
 
 ```
 
@@ -71,7 +71,6 @@ gwas.with.cov<-function(SNP,cov=covariates.pheno){
   colnames(df)<-c('SNP',colnames(covariates.pheno))
   fit<-lm(HEIGHT~.,data=df)
   summary.coefs<-summary(fit)$coefficients
-  print(head(summary.coefs))
   data.frame(coef=summary.coefs[2,1],pval=summary.coefs[2,4])
 }
 ```
