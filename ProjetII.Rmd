@@ -11,7 +11,7 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R environment
+# R environment
 
 We use the package ggplot2
 
@@ -27,7 +27,7 @@ We load the data genotypes.txt, variants_info_openSNP.txt, phenotypes.txt and co
 genotypes<-read.table('ressources/genotypes.txt',header=T)
 phenotypes<-read.table('ressources/phenotypes.txt', header=T)
 variants.info<-read.table('ressources/variants_info_openSNP.txt',header=T)
-covariates<-read.table('resosurces/covariates.txt',header=T)
+covariates<-read.table('ressources/covariates.txt',header=T)
 
 ```
 
@@ -57,7 +57,10 @@ ggplot()+geom_density(data=covariates.pheno,aes(HEIGHT,color='male+female'),size
   geom_density(data=covariates.pheno.F,aes(HEIGHT,color='female'),size=0.8)+ theme_bw()
 
 ```
+# Genome-Wide Association Study
 
+1.
+running GWAS without covariates
 ```{r}
 gwas<-function(SNP,phenos=phenotypes$HEIGHT){
   df<-data.frame(cbind(SNP,phenos))
@@ -81,22 +84,44 @@ for(i in 1:ncol(genotypes)){
   gwas.res<-rbind(gwas.res,gwas(genotypes[,i]))
 }
 rownames(gwas.res)<-colnames(genotypes)
+gwas.res<-cbind(gwas.res, variants.info$CHR)
 ```
 
+running GWAS with covariates
 ```{r}
 gwas.res.with.cov<-data.frame(coef=NULL,pval=NULL)
 for(i in 1:ncol(genotypes)){
   gwas.res.with.cov<-rbind(gwas.res.with.cov,gwas.with.cov(genotypes[,i]))
 }
 rownames(gwas.res.with.cov)<-colnames(genotypes)
+gwas.res.with.cov<-cbind(gwas.res.with.cov,variants.info$CHR)
 ```
-Now manhattanplot.
+
+2.
+Manhattan plots.
 ```{r}
-# gwas.res<-gwas.res[variants.info$SNP,]
-# cols<-variants.info$CHR
-# ggplot(gwas.res,aes(x=rownames(gwas.res),y=-log10(pval),color=as.factor(cols),size=-log10(pval)))+
-  # geom_point(alpha=0.5)+
-  # scale_size_continuous(range = c(0.5,3)) 
+manhattan.plot<-function(gwas.out,title){
+colnames(gwas.out)<-c('coef','pval','CHR')
+bonferroni_thresh<-0.05/nrow(gwas.out)
+ggplot(gwas.out,aes(x=1:nrow(gwas.out),y=-log10(pval),color=CHR%%2,size=-log10(pval)))+
+  geom_point(shape=20)+
+  geom_hline(yintercept = -log10(bonferroni_thresh),linetype='dotdash')+
+  scale_size_continuous(range = c(1,4))+
+  scale_y_continuous(limits=c(0,10))+
+  theme(legend.position = 'none')+
+  annotate(geom='text', x=600,y=5.6, label='Bonferroni threshold',size=3.5)+
+  labs(x='SNP position',y='-log10(P-value)')+
+  ggtitle(title)
+}
+```
+
+```{r}
+manhattan.plot(gwas.res, 'GWAS Visualisation without covariates')
+```
+
+
+```{r}
+manhattan.plot(gwas.res.with.cov, 'GWAS Visualitation with covariates')
 ```
 
 
