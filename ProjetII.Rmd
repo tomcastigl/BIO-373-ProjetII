@@ -67,16 +67,17 @@ gwas<-function(SNP,phenos=phenotypes$HEIGHT){
   colnames(df)<-c('SNP','HEIGHT')
   fit<-lm(HEIGHT~.,data=df)
   summary.coefs<-summary(fit)$coefficient
-  data.frame(coef=summary.coefs[2,1],pval=summary.coefs[2,4])
+  data.frame(coef=summary.coefs[2,1],intercept=summary.coefs[1,1],pval=summary.coefs[2,4])
 }
 gwas.with.cov<-function(SNP,cov=covariates.pheno){
   df<-data.frame(cbind(SNP,cov))
   colnames(df)<-c('SNP',colnames(covariates.pheno))
   fit<-lm(HEIGHT~.,data=df)
   summary.coefs<-summary(fit)$coefficients
-  data.frame(coef=summary.coefs[2,1],pval=summary.coefs[2,4])
+  data.frame(coef=summary.coefs[2,1],intercept=summary.coefs[1,1],pval=summary.coefs[2,4])
 }
 ```
+
 
 ```{r}
 gwas.res<-data.frame(coef=NULL,pval=NULL)
@@ -101,7 +102,7 @@ gwas.res.with.cov<-cbind(gwas.res.with.cov,variants.info$CHR)
 Manhattan plots.
 ```{r}
 manhattan.plot<-function(gwas.out,title){
-colnames(gwas.out)<-c('coef','pval','CHR')
+colnames(gwas.out)<-c('coef','intercept','pval','CHR')
 bonferroni_thresh<-0.05/nrow(gwas.out)
 ggplot(gwas.out,aes(x=1:nrow(gwas.out),y=-log10(pval),color=CHR%%2,size=-log10(pval)))+
   geom_point(shape=20)+
@@ -124,6 +125,53 @@ manhattan.plot(gwas.res, 'GWAS Visualisation without covariates')
 manhattan.plot(gwas.res.with.cov, 'GWAS Visualitation with covariates')
 ```
 
+#  Meta-analysis with the GIANT Study
 
 
+```{r}
+# read data from giant study
+giant.summary <- read.table('ressources/summary_GWAS_giant.txt',header=T)
+print(paste0('# of SNPs not available in GIANT dataframe: ',nrow(gwas.res.with.cov) - nrow(giant.summary)))
+# add rownames as column to allow merge on column SNP
+gwas.res.with.cov.new <- cbind(data.frame(SNP=rownames(gwas.res.with.cov)),gwas.res.with.cov)
+# merge giant study data with our data
+merged <- merge(giant.summary,gwas.res.with.cov.new,by='SNP')
+# linear fit between coefficients from giant study and our analysis
+coefs <- summary(lm(merged$coef~merged$BETA))$coefficients
+#plot
+ggplot(merged,aes(x=BETA,y=coef)) +
+  geom_point() +
+  geom_abline(intercept=coefs[1,1],slope=coefs[2,1]) +
+  xlab(paste0("\u03B2", '(GIANT study)')) + ylab(paste0("\u03B2", '(our analysis)'))
+print('Correlation coefficient: ')
+cor.test(merged$coef,merged$BETA)
+```
+
+# Genomic prediction
+
+```{r}
+genotypes.test <- read.table('ressources/genotypes_test.txt',header=T)
+res <- as.matrix(genotypes.test[,giant.summary$SNP]) %*% as.matrix(gwas.res.with.cov[giant.summary$SNP,]$coef)
+
+hist(res)
+
+
+
+head(giant.summary)
+
+length(giant.summary$BETA)
+head(giant.summary)
+
+res.giant <- as.matrix(genotypes.test[giant.summary$SNP]) %*% as.matrix(giant.summary$BETA)
+hist(res.giant)
+
+fit <- lm(HEIGHT~.,data=data.frame(HEIGHT=phenotypes$HEIGHT,genotypes))
+res <- predict(fit,data=data.frame(genotypes.test))
+summary(fit)['r.squared']
+```
+
+
+```{r}
+
+```
 
