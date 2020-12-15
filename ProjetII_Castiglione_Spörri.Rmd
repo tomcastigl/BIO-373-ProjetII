@@ -143,7 +143,8 @@ Also, the GWAS with covariates does not shows any SNP having significance higher
 ```{r}
 # read data from giant study
 giant.summary <- read.table('ressources/summary_GWAS_giant.txt',header=T)
-print(paste0('# of SNPs not available in GIANT dataframe: ',nrow(gwas.res.with.cov) - nrow(giant.summary)))
+print(paste0('# of SNPs not available in GIANT dataframe: ',
+             nrow(gwas.res.with.cov) - nrow(giant.summary)))
 # add rownames as column to allow merge on column SNP
 gwas.res.with.cov.new <- cbind(data.frame(SNP=rownames(gwas.res.with.cov)),gwas.res.with.cov)
 # merge giant study data with our data
@@ -167,8 +168,10 @@ Interestingly, the two sets of coefficients do not seem to have the same scale. 
 ```{r}
 genotypes.test <- read.table('ressources/genotypes_test.txt',header=T)
 phenotypes.test <- read.table('ressources/phenotypes_test.txt',header=T)
-res <- as.matrix(genotypes.test[,giant.summary$SNP]) %*% as.matrix(gwas.res.with.cov[giant.summary$SNP,]$coef)
-res.giant <- as.matrix(genotypes.test[giant.summary$SNP]) %*% as.matrix(giant.summary$BETA)
+res <- as.matrix(genotypes.test[,giant.summary$SNP]) %*%
+  as.matrix(gwas.res.with.cov[giant.summary$SNP,]$coef)
+res.giant <- as.matrix(genotypes.test[giant.summary$SNP]) %*%
+  as.matrix(giant.summary$BETA)
 par(mfrow=c(2,2))
 hist(phenotypes$HEIGHT)
 hist(res)
