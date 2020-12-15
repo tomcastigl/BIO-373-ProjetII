@@ -31,7 +31,7 @@ covariates<-read.table('ressources/covariates.txt',header=T)
 
 ```
 
-## 1. linear regression.
+1. linear regression.
 ```{r}
 covariates.pheno<-cbind(covariates,phenotypes$HEIGHT)
 rownames(covariates.pheno)<-covariates$CHALLENGE_ID
@@ -41,12 +41,10 @@ colnames(covariates.pheno)<-c('SEX','PLATFORM','HEIGHT')
 lin.reg.cov<-lm(HEIGHT~., data=covariates.pheno)
 summary(lin.reg.cov)
 
-nrow(covariates.pheno[covariates.pheno$PLATFORM=='ftdna-illumina',])
 ```
-The multiple R-squared value of 0.472 shows us that the covariates do impact the phenotype, but they do not fully explain its variations. Interestingly, people who sequenced their genome with the platform tdna-illumina are significantly smaler (by 7cm in the mean). This is very probably an artefact in our data since there are only 17 people who used this platform.
+The multiple R-squared value of 0.472 shows us that the covariates does impact the phenotype, but it is does not fully determines it.
 
-
-## 2. Plotting the phenotype distribution
+2. Plotting the phenotype distribution
 ```{r}
 ggplot(phenotypes)+geom_density(aes(HEIGHT),size=1)+theme_bw()
 ```
@@ -59,8 +57,6 @@ ggplot()+geom_density(data=covariates.pheno,aes(HEIGHT,color='male+female'),size
   geom_density(data=covariates.pheno.F,aes(HEIGHT,color='female'),size=0.8)+ theme_bw()
 
 ```
-The mean height of men is higher than the mean height of women. The bell curve for men is a little bit skew towards the right. 
-
 # Genome-Wide Association Study
 
 1.
@@ -146,69 +142,36 @@ coefs <- summary(lm(merged$coef~merged$BETA))$coefficients
 ggplot(merged,aes(x=BETA,y=coef)) +
   geom_point() +
   geom_abline(intercept=coefs[1,1],slope=coefs[2,1]) +
-  xlab(paste0('coefficients (GIANT study)')) + ylab(paste0('coefficients (our analysis)'))
+  xlab(paste0("\u03B2", '(GIANT study)')) + ylab(paste0("\u03B2", '(our analysis)'))
 print('Correlation coefficient: ')
 cor.test(merged$coef,merged$BETA)
 ```
-
-Interestingly, the two sets of coefficients do not seem to have the same scale. The coefficients in the GIANT study are roughly 10 times smaller than the coefficients we found. This could be due to scaling of the response variable in the GIANT study before fitting the individual linear models.
-
 
 # Genomic prediction
 
 ```{r}
 genotypes.test <- read.table('ressources/genotypes_test.txt',header=T)
-phenotypes.test <- read.table('ressources/phenotypes_test.txt',header=T)
 res <- as.matrix(genotypes.test[,giant.summary$SNP]) %*% as.matrix(gwas.res.with.cov[giant.summary$SNP,]$coef)
-res.giant <- as.matrix(genotypes.test[giant.summary$SNP]) %*% as.matrix(giant.summary$BETA)
-par(mfrow=c(2,2))
-hist(phenotypes$HEIGHT)
+
 hist(res)
-hist(phenotypes.test$HEIGHT)
+
+
+
+head(giant.summary)
+
+length(giant.summary$BETA)
+head(giant.summary)
+
+res.giant <- as.matrix(genotypes.test[giant.summary$SNP]) %*% as.matrix(giant.summary$BETA)
 hist(res.giant)
+
+fit <- lm(HEIGHT~.,data=data.frame(HEIGHT=phenotypes$HEIGHT,genotypes))
+res <- predict(fit,data=data.frame(genotypes.test))
+summary(fit)['r.squared']
 ```
-
-Multiplying the coefficients we found in our analyisis and the coefficients from the GIANT study yields predictions that are not yet on the right scale. It can be observed on the plots above that the predictions made by the GIANT study are closer to a normal distribution than the prediction we got from our analysis. This can be explained by the number of participants in the two studies (n bigger for GIANT).
-
-To get an estimate of the accuracy of our prediction we find the R^2 value between our predictions and the real values in the test set.
-
-```{r}
-fit <- lm(phenotypes.test$HEIGHT~res)
-ggplot(data.frame(height=phenotypes.test$HEIGHT,predictions=res),aes(y=height,x=predictions)) +
-  geom_point() +
-  geom_abline(intercept=fit$coefficients[1],slope=fit$coefficients[2]) +
-  ggtitle('openSNP')
-
-fit.giant <- lm(phenotypes.test$HEIGHT~res.giant)
-ggplot(data.frame(height=phenotypes.test$HEIGHT,predictions=res.giant),aes(y=height,x=predictions)) +
-  geom_point() +
-  geom_abline(intercept=fit.giant$coefficients[1],slope=fit.giant$coefficients[2]) +
-  ggtitle('GIANT')
-
-print('R^2:')
-print(paste0('openSNP: ', summary(fit)['r.squared']))
-print(paste0('GIANT: ', summary(fit.giant)['r.squared']))
-```
-
-We repeat the same analysis but this time we add the covariate SEX to the linear model. We observe that the R^2 value greatly increases through this.
 
 
 ```{r}
-covariates.test <- read.table('ressources/covariates_test.txt',header=T)
-fit <- lm(phenotypes.test$HEIGHT~res + covariates.test$SEX)
-ggplot(data.frame(height=phenotypes.test$HEIGHT,predictions=res),aes(y=height,x=predictions)) +
-  geom_point() +
-  geom_abline(intercept=fit$coefficients[1],slope=fit$coefficients[2]) +
-  ggtitle('openSNP')
 
-fit.giant <- lm(phenotypes.test$HEIGHT~res.giant+ covariates.test$SEX)
-ggplot(data.frame(height=phenotypes.test$HEIGHT,predictions=res.giant),aes(y=height,x=predictions)) +
-  geom_point() +
-  geom_abline(intercept=fit.giant$coefficients[1],slope=fit.giant$coefficients[2]) +
-  ggtitle('GIANT')
-
-print('R^2:')
-print(paste0('openSNP: ', summary(fit)['r.squared']))
-print(paste0('GIANT: ', summary(fit.giant)['r.squared']))
 ```
 
