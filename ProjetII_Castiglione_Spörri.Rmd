@@ -137,6 +137,16 @@ We can see from the GWAS results without covariates that one of the very last SN
 
 Also, the GWAS with covariates does not shows any SNP having significance higher than the Bonferroni threshold. But some of them get close to it, meaning they may impact the height, but without high significance.
 
+```{r}
+sign.snp<-rownames(gwas.res)[which(gwas.res$pval < 0.05/nrow(gwas.res))]
+pos.sign.snp<-variants.info[which(variants.info$SNP %in% sign.snp),3]
+cat('The highly significant SNP out of the GWAS without covariates are: ',
+    sign.snp,'\n and they are located at positions: ', pos.sign.snp, ' on chromosome 24.')
+```
+
+We can understand the chromosome 24 here being the chromosome X in women and Y in men, but we cannot verify this assumption. If this is true, an explanation of the fact that the significance of these 2 SNPs disappear when doing GWAS with covariates may be that these SNPs are specific to the sex, on the chromosomes X or Y. Also, A interesting observation we made is that the missing 20 SNPs in the GIANT data are all located on this chromosome 24.
+
+
 #  Meta-analysis with the GIANT Study
 
 
